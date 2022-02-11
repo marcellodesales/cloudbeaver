@@ -14,16 +14,18 @@
         <groupId>org.jkiss.dbeaver</groupId>
         <artifactId>dbeaver</artifactId>
         <version>1.0.0-SNAPSHOT</version>
-        <relativePath>../../dbeaver/</relativePath>
+        <relativePath>../../dbeaver</relativePath>
     </parent>
 
     <properties>
-        <dbeaver-product>Cloudbeaver</dbeaver-product>
+        <dbeaver-product>CloudBeaver CE</dbeaver-product>
+        <dbeaver-version>21.3.4</dbeaver-version>
     </properties>
 
     <modules>
         <module>bundles</module>
         <module>features</module>
+        <module>drivers</module>
 
         <!-- Products -->
         <module>product</module>

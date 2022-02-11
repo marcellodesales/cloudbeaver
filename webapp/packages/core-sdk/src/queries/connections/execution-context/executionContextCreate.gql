@@ -1,0 +1,13 @@
+mutation executionContextCreate(
+  $connectionId: ID!
+  $defaultCatalog: String
+  $defaultSchema: String
+) {
+  context: sqlContextCreate(
+    connectionId: $connectionId
+    defaultCatalog: $defaultCatalog
+    defaultSchema: $defaultSchema
+  ) {
+    ...ExecutionContextInfo
+  }
+}

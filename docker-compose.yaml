@@ -1,0 +1,57 @@
+version: '3'
+
+networks:
+  cloudbeaver-network:
+    name: cloudbeaver-network
+
+services:
+
+  ####
+  #### BUILD: docker-compose build cloudbeaver-backend
+  #### VERIFY: docker run -ti marcellodesales/cloudbeaver-backend find /dbeaver/cloud/backend -name "org.eclipse.equinox.launcher*.jar"
+  ####
+  cloudbeaver-backend:
+    image: ghcr.io/dbeaver/cloudbeaver/backend
+    build:
+      context: .
+      target: backend-builder
+      cache_from:
+        - ghcr.io/dbeaver/cloudbeaver/backend
+
+  ####
+  #### BUILD: docker-compose build cloudbeaver-frontend
+  #### VERIFY: docker run -ti marcellodesales/cloudbeaver-frontend find /dbeaver/cloud/frontend -name "@cloudbeaver"
+  ####
+  cloudbeaver-frontend:
+    image: ghcr.io/dbeaver/cloudbeaver/frontend
+    build:
+      context: .
+      target: frontend-builder
+      cache_from:
+        - ghcr.io/dbeaver/cloudbeaver/frontend
+
+  ####
+  #### BUILD: docker-compose build cloudbeaver-frontend
+  #### VERIFY: docker run -ti marcellodesales/cloudbeaver-frontend find /dbeaver/cloud/frontend -name "@cloudbeaver"
+  ####
+  cloudbeaver:
+    image: ghcr.io/dbeaver/cloudbeaver/server
+    build:
+      context: .
+      cache_from:
+        - ghcr.io/dbeaver/cloudbeaver/backend
+        - ghcr.io/dbeaver/cloudbeaver/frontend
+        - ghcr.io/dbeaver/cloudbeaver/server
+    container_name: cloudbeaver
+    labels:
+      com.github.marcellodesales.type: runtime
+    networks:
+      - cloudbeaver-network
+    ports:
+      - "8978:8978"
+    volumes:
+      - ./data/logs:/opt/cloudbeaver/logs
+      - ./data/workspace/:/opt/cloudbeaver/workspace 
+
+      # when deploying on a real server using docker-compose, just uncomment the local volume
+      #- /var/cloudbeaver/workspace:/opt/cloudbeaver/workspace

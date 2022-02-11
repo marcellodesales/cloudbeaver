@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2020 DBeaver Corp and others
+ * Copyright (C) 2010-2022 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,14 @@
  */
 package io.cloudbeaver.connect.provider.sample;
 
-import org.eclipse.core.resources.IFile;
-import org.eclipse.core.resources.IFolder;
 import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.Log;
 import org.jkiss.dbeaver.model.DBPDataSourceConfigurationStorage;
 import org.jkiss.dbeaver.model.DBPDataSourceContainer;
 import org.jkiss.dbeaver.model.app.DBPDataSourceRegistry;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -60,15 +60,15 @@ public class SampleDataSourceConfigurationStorage implements DBPDataSourceConfig
 
     @Override
     public List<? extends DBPDataSourceContainer> loadDataSources(DBPDataSourceRegistry registry, Map<String, Object> options) throws DBException {
-        IFolder metadataFolder = registry.getProject().getMetadataFolder(false);
-        if (metadataFolder.exists()) {
-            IFile sampleConfigFile = metadataFolder.getFile(SAMPLE_CONFIG_NAME);
-            if (sampleConfigFile.exists()) {
-                log.debug("Loading provided connections from [" + sampleConfigFile.getFullPath().toString() + "]");
+        Path metadataFolder = registry.getProject().getMetadataFolder(false);
+        if (Files.exists(metadataFolder)) {
+            Path sampleConfigFile = metadataFolder.resolve(SAMPLE_CONFIG_NAME);
+            if (Files.exists(sampleConfigFile)) {
+                log.debug("Loading provided connections from [" + sampleConfigFile.toAbsolutePath() + "]");
                 List<? extends DBPDataSourceContainer> dsList = registry.loadDataSourcesFromFile(this, sampleConfigFile);
-                for (DBPDataSourceContainer ds : dsList) {
-                    log.debug("\tProvided connection: " + ds.getName());
-                }
+//                for (DBPDataSourceContainer ds : dsList) {
+//                    log.debug("\tProvided connection: " + ds.getName());
+//                }
                 return dsList;
             }
         }
@@ -77,7 +77,7 @@ public class SampleDataSourceConfigurationStorage implements DBPDataSourceConfig
 
     @Override
     public String getConfigurationFileSuffix() {
-        return "sample";
+        return "-sample";
     }
 
 }

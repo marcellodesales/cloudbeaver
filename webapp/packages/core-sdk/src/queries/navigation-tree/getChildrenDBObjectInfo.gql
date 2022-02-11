@@ -1,0 +1,8 @@
+query getChildrenDBObjectInfo(
+  $navNodeId: ID!
+  $filter: ObjectPropertyFilter
+) {
+  dbObjects: navNodeChildren(parentPath: $navNodeId) {
+    ...NavNodeDBObjectInfo
+  }
+}

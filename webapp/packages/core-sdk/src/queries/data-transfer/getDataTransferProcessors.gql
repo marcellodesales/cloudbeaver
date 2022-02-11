@@ -1,0 +1,26 @@
+query getDataTransferProcessors {
+  processors: dataTransferAvailableStreamProcessors {
+    id
+    name
+    description
+    fileExtension
+    appFileExtension
+    appName
+    order
+    icon
+    properties {
+      id
+      displayName
+      description
+      category
+      dataType
+      defaultValue
+      validValues
+      length
+      features
+      order
+    }
+    isBinary
+    isHTML
+  }
+}

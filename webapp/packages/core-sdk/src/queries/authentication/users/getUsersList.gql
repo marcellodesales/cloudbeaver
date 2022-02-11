@@ -1,0 +1,5 @@
+query getUsersList($userId: ID, $includeMetaParameters: Boolean!, $customIncludeOriginDetails: Boolean!) {
+  users: listUsers(userId: $userId) {
+    ...AdminUserInfo
+  } 
+}

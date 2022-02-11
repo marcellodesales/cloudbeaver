@@ -1,7 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2020 DBeaver Corp and others
- * Copyright (C) 2017-2018 Alexander Fedorov (alexander.fedorov@jkiss.org)
+ * Copyright (C) 2010-2022 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,9 +30,9 @@ public class WebPlatformAdapterFactory implements IAdapterFactory {
     public <T> T getAdapter(Object adaptableObject, Class<T> adapterType) {
         if (adaptableObject instanceof DBWorkbench) {
             if (adapterType == DBPPlatform.class) {
-                return adapterType.cast(CloudbeaverPlatform.getInstance());
+                return adapterType.cast(CBPlatform.getInstance());
             } else if (adapterType == DBPPlatformUI.class) {
-                return adapterType.cast(CloudbeaverPlatformUI.INSTANCE);
+                return adapterType.cast(CBPlatformUI.INSTANCE);
             }
         }
         return null;

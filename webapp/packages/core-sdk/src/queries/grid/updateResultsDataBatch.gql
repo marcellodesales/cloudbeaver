@@ -1,0 +1,28 @@
+mutation updateResultsDataBatch(
+    $connectionId: ID!
+    $contextId: ID!
+    $resultsId: ID!
+    $updatedRows: [ SQLResultRow! ]
+    $deletedRows: [ SQLResultRow! ]
+    $addedRows: [ SQLResultRow! ]
+) {
+    result: updateResultsDataBatch(
+        connectionId: $connectionId
+        contextId: $contextId
+        resultsId: $resultsId
+
+        updatedRows: $updatedRows
+        deletedRows: $deletedRows
+        addedRows: $addedRows
+    ) {
+        duration
+        filterText
+        results {
+            updateRowCount
+            resultSet {
+                id
+                rows
+            }
+        }
+    }
+}

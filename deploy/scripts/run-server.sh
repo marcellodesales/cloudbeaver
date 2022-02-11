@@ -1,8 +1,9 @@
 #!/bin/bash
-cd server
-launcherJar=( plugins/org.eclipse.equinox.launcher*.jar )
-workspacePath=./../workspace
+
+launcherJar=( server/plugins/org.eclipse.equinox.launcher*.jar )
 
 echo "Starting Cloudbeaver Server"
 
-java -jar ${launcherJar} -product io.cloudbeaver.server.product -data ${workspacePath} -web-config ./../conf/cloudbeaver.conf -nl en -registryMultiLanguage -vmargs -Xmx2048M
+[ ! -d "workspace/.metadata" ] && mkdir -p workspace/.metadata && mkdir -p workspace/GlobalConfiguration/.dbeaver && cp conf/initial-data-sources.conf workspace/GlobalConfiguration/.dbeaver/data-sources.json
+
+java ${JAVA_OPTS} -jar ${launcherJar} -product io.cloudbeaver.product.ce.product -web-config conf/cloudbeaver.conf -nl en -registryMultiLanguage

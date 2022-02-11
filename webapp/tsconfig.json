@@ -1,22 +1,56 @@
 {
-  "extends": "./tsconfig.base.json",
+  "compileOnSave": false,
+  "files": [
+    "typings.d.ts"
+  ],
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "**/node_modules",
+    "**/.*/"
+  ],
   "compilerOptions": {
-    "paths": {
-      "@dbeaver/*": ["packages/*/src"],
-
-      "@dbeaver/core/assets": ["packages/core/assets"],
-
-      "@dbeaver/core/app": ["packages/core/src/app"],
-      "@dbeaver/core/blocks": ["packages/core/src/blocks"],
-      "@dbeaver/core/di": ["packages/core/src/di"],
-      "@dbeaver/core/dialogs": ["packages/core/src/dialogs"],
-      "@dbeaver/core/eventsLog": ["packages/core/src/eventsLog"],
-      "@dbeaver/core/localization": ["packages/core/src/localization"],
-      "@dbeaver/core/root": ["packages/core/src/root"],
-      "@dbeaver/core/sdk": ["packages/core/src/sdk"],
-      "@dbeaver/core/settings": ["packages/core/src/settings"],
-      "@dbeaver/core/theming": ["packages/core/src/theming"],
-      "@dbeaver/core/utils": ["packages/core/src/utils"]
-    }
-  }
+    "baseUrl": ".",
+    "allowUnreachableCode": false,
+    "allowSyntheticDefaultImports": true,
+    "allowJs": true,
+    "lib": [
+      "dom",
+      "ES2019"
+    ],
+    "useDefineForClassFields": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "emitDeclarationOnly": true,
+    "importsNotUsedAsValues": "error",
+    "jsx": "preserve",
+    "target": "esnext",
+    "module": "esnext",
+    "esModuleInterop": true,
+    "moduleResolution": "node",
+    "declaration": true,
+    "declarationMap": true,
+    "noImplicitAny": true,
+    "noImplicitThis": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "removeComments": false,
+    "preserveConstEnums": true,
+    "sourceMap": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "incremental": true,
+    "strictNullChecks": true,
+    "isolatedModules": true,
+    "types": [
+      "reflect-metadata",
+      "node"
+    ],
+  },
+  "references": [
+      { "path": "./packages/*" }
+  ]
 }

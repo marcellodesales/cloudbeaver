@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2020 DBeaver Corp and others
+ * Copyright (C) 2010-2022 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,18 +26,20 @@ import graphql.execution.instrumentation.parameters.InstrumentationExecutionPara
 import graphql.execution.instrumentation.parameters.InstrumentationFieldFetchParameters;
 import graphql.language.SourceLocation;
 import graphql.schema.DataFetcher;
+import graphql.schema.DataFetchingEnvironment;
 import graphql.schema.GraphQLSchema;
 import graphql.schema.idl.SchemaGenerator;
 import graphql.schema.idl.SchemaParser;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.cloudbeaver.DBWebException;
 import io.cloudbeaver.WebServiceUtils;
-import io.cloudbeaver.api.DBWService;
-import io.cloudbeaver.api.DBWServiceGraphQL;
-import io.cloudbeaver.server.CloudbeaverApplication;
-import io.cloudbeaver.server.registry.WebServiceDescriptor;
-import io.cloudbeaver.server.registry.WebServiceRegistry;
+import io.cloudbeaver.model.session.WebSession;
+import io.cloudbeaver.registry.WebServiceRegistry;
+import io.cloudbeaver.server.CBApplication;
+import io.cloudbeaver.service.DBWServiceBindingGraphQL;
+import io.cloudbeaver.service.WebServiceBindingBase;
 import org.jkiss.dbeaver.Log;
+import org.jkiss.dbeaver.model.DBConstants;
 import org.jkiss.utils.IOUtils;
 
 import javax.servlet.ServletException;
@@ -48,9 +50,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
-import java.util.Collections;
-import java.util.Map;
+import java.text.SimpleDateFormat;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 public class GraphQLEndpoint extends HttpServlet {
@@ -63,12 +66,15 @@ public class GraphQLEndpoint extends HttpServlet {
 
     private static final String CORE_SCHEMA_FILE_NAME = "schema/schema.graphqls";
 
+    private static final String SESSION_TEMP_COOKIE = "cb-session";
+
     private final GraphQL graphQL;
 
     private static Gson gson = new GsonBuilder()
         .serializeNulls()
         .setPrettyPrinting()
         .create();
+    private GraphQLBindingContext bindingContext;
 
     public GraphQLEndpoint() {
         GraphQLSchema schema = buildSchema();
@@ -93,30 +99,23 @@ public class GraphQLEndpoint extends HttpServlet {
             throw new RuntimeException("Error reading core schema", e);
         }
 
-        for (WebServiceDescriptor wsd : WebServiceRegistry.getInstance().getWebServices()) {
-            DBWService instance;
+        List<String> addedBindings = new ArrayList<>();
+        for (DBWServiceBindingGraphQL wsd : WebServiceRegistry.getInstance().getWebServices(DBWServiceBindingGraphQL.class)) {
             try {
-                instance = wsd.getInstance();
-            } catch (Exception e) {
-                log.error(e);
-                continue;
-            }
-            if (instance instanceof DBWServiceGraphQL) {
-                try {
-                    TypeDefinitionRegistry typeDefinition = ((DBWServiceGraphQL) instance).getTypeDefinition();
-                    if (typeDefinition != null) {
-                        log.debug("Adding web service '" + wsd.getId() + "' GQL schema");
-                        parsedSchema.merge(typeDefinition);
-                    }
-                } catch (DBWebException e) {
-                    log.warn("Error obtaining web service '" + wsd.getId() + "' type definitions", e);
+                TypeDefinitionRegistry typeDefinition = wsd.getTypeDefinition();
+                if (typeDefinition != null) {
+                    addedBindings.add(wsd.getClass().getSimpleName());
+                    parsedSchema.merge(typeDefinition);
                 }
+            } catch (DBWebException e) {
+                log.warn("Error obtaining web service type definitions", e);
             }
         }
+        log.debug("Schema extensions loaded: " + String.join(",", addedBindings));
 
         SchemaGenerator schemaGenerator = new SchemaGenerator();
-        GraphQLModel wiring = new GraphQLModel();
-        return schemaGenerator.makeExecutableSchema(parsedSchema, wiring.buildRuntimeWiring());
+        bindingContext = new GraphQLBindingContext();
+        return schemaGenerator.makeExecutableSchema(parsedSchema, bindingContext.buildRuntimeWiring());
     }
 
     @Override
@@ -125,7 +124,7 @@ public class GraphQLEndpoint extends HttpServlet {
     }
 
     private void setDevelHeaders(HttpServletRequest request, HttpServletResponse response) {
-        if (CloudbeaverApplication.getInstance().isDevelMode()) {
+        if (CBApplication.getInstance().isDevelMode()) {
             // response.setHeader(HEADER_ACCESS_CONTROL_ALLOW_ORIGIN, "*");
             // response.setHeader(HEADER_ACCESS_CONTROL_ALLOW_HEADERS, "*");
             // response.setHeader(HEADER_ACCESS_CONTROL_ALLOW_CREDENTIALS, "*");
@@ -157,6 +156,8 @@ public class GraphQLEndpoint extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        beforeApiCall(request, response);
+
         String postBody = IOUtils.readToString(request.getReader());
         JsonElement json = gson.fromJson(postBody, JsonElement.class);
         if (json instanceof JsonArray) {
@@ -202,11 +203,13 @@ public class GraphQLEndpoint extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        beforeApiCall(request, response);
+
         String path = request.getPathInfo();
         if (path == null) {
             path = request.getServletPath();
         }
-        boolean develMode = CloudbeaverApplication.getInstance().isDevelMode();
+        boolean develMode = CBApplication.getInstance().isDevelMode();
 
         if (path.contentEquals("/schema.json") && develMode) {
             executeQuery(request, response, GraphQLConstants.SCHEMA_READ_QUERY, null, null);
@@ -228,6 +231,7 @@ public class GraphQLEndpoint extends HttpServlet {
         GraphQLContext context = new GraphQLContext.Builder()
             .of("request", request)
             .of("response", response)
+            .of("bindingContext", bindingContext)
             .build();
         ExecutionInput.Builder contextBuilder = ExecutionInput.newExecutionInput()
             .context(context)
@@ -238,7 +242,17 @@ public class GraphQLEndpoint extends HttpServlet {
         if (operationName != null) {
             contextBuilder.operationName(operationName);
         }
-
+        {
+            String apiCall = operationName;
+//            if (!CommonUtils.isEmpty(apiCall)) {
+//                if (variables != null) {
+//                    apiCall += " (" + variables + ")";
+//                }
+//            }
+            if (apiCall != null) {
+                log.debug("API > " + apiCall);
+            }
+        }
         ExecutionInput executionInput = contextBuilder.build();
         ExecutionResult executionResult = graphQL.execute(executionInput);
 
@@ -249,7 +263,17 @@ public class GraphQLEndpoint extends HttpServlet {
         response.getWriter().print(resString);
     }
 
-    private class WebInstrumentation extends SimpleInstrumentation {
+    private void beforeApiCall(HttpServletRequest request, HttpServletResponse response) {
+        long maxSessionIdleTime = CBApplication.getInstance().getMaxSessionIdleTime();
+        SimpleDateFormat sdf = new SimpleDateFormat(DBConstants.DEFAULT_ISO_TIMESTAMP_FORMAT);
+        sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
+        String cookieValue = sdf.format(new Date(System.currentTimeMillis() + maxSessionIdleTime));
+
+        WebServiceUtils.addResponseCookie(
+            response, SESSION_TEMP_COOKIE, cookieValue, maxSessionIdleTime);
+    }
+
+    private static class WebInstrumentation extends SimpleInstrumentation {
         @Override
         public CompletableFuture<ExecutionResult> instrumentExecutionResult(ExecutionResult executionResult, InstrumentationExecutionParameters parameters) {
             return super.instrumentExecutionResult(executionResult, parameters);
@@ -273,22 +297,58 @@ public class GraphQLEndpoint extends HttpServlet {
         public WebExecutionStrategy() {
             super(handlerParameters -> {
                 Throwable exception = handlerParameters.getException();
-                log.debug(exception);
+                if (exception instanceof GraphQLException && exception.getCause() != null) {
+                    exception = exception.getCause();
+                }
+                if (exception instanceof InvocationTargetException) {
+                    exception = ((InvocationTargetException) exception).getTargetException();
+                }
+                log.debug("GraphQL call failed at '" + handlerParameters.getPath() + "'" /*+ ", " + handlerParameters.getArgumentValues()*/, exception);
+
+                // Log in session
+                WebSession webSession = WebServiceBindingBase.findWebSession(handlerParameters.getDataFetchingEnvironment());
+                if (webSession != null) {
+                    webSession.addSessionError(exception);
+                }
 
                 SourceLocation sourceLocation = handlerParameters.getSourceLocation();
                 ExecutionPath path = handlerParameters.getPath();
 
                 DataFetcherExceptionHandlerResult.Builder handlerResult = DataFetcherExceptionHandlerResult.newResult();
-                if (exception instanceof GraphQLError) {
-                    if (exception instanceof DBWebException) {
-                        ((DBWebException) exception).setPath(path.toList());
-                        ((DBWebException) exception).setLocations(Collections.singletonList(sourceLocation));
-                    }
-                    return handlerResult.error((GraphQLError) exception).build();
-                } else {
-                    return handlerResult.error(new ExceptionWhileDataFetching(path, exception, sourceLocation)).build();
+                if (!(exception instanceof GraphQLError)) {
+                    exception = new DBWebException(exception.getMessage(), exception);
                 }
+                if (exception instanceof DBWebException) {
+                    ((DBWebException) exception).setPath(path.toList());
+                    ((DBWebException) exception).setLocations(Collections.singletonList(sourceLocation));
+                }
+                return handlerResult.error((GraphQLError) exception).build();
             });
         }
     }
+
+
+    public static HttpServletRequest getServletRequest(DataFetchingEnvironment env) {
+        GraphQLContext context = env.getContext();
+        HttpServletRequest request = context.get("request");
+        if (request == null) {
+            throw new IllegalStateException("Null request");
+        }
+        return request;
+    }
+
+    public static HttpServletResponse getServletResponse(DataFetchingEnvironment env) {
+        GraphQLContext context = env.getContext();
+        HttpServletResponse response = context.get("response");
+        if (response == null) {
+            throw new IllegalStateException("Null response");
+        }
+        return response;
+    }
+
+    public static GraphQLBindingContext getBindingContext(DataFetchingEnvironment env) {
+        GraphQLContext context = env.getContext();
+        return context.get("bindingContext");
+    }
+
 }

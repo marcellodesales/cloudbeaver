@@ -5,7 +5,7 @@
          <meta.schema plugin="io.cloudbeaver.server" id="io.cloudbeaver.service" name="Web services"/>
       </appInfo>
       <documentation>
-         DBeaver data source provider
+         Web service
       </documentation>
    </annotation>
 

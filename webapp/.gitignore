@@ -1,4 +1,12 @@
 .idea
 node_modules
-
-yarn-error.log
+src/**/*.js
+src/**/*.js.map
+typings
+dist
+lib
+coverage
+ts-out
+npm-debug.log
+debug.log
+tsconfig.tsbuildinfo

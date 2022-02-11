@@ -17,6 +17,8 @@
         <module>io.cloudbeaver.ce.drivers.feature</module>
 
         <module>io.cloudbeaver.sample.feature</module>
+
+        <module>io.cloudbeaver.product.ce.feature</module>
     </modules>
 
 </project>

@@ -1,0 +1,5 @@
+query createUser($userId: ID!, $includeMetaParameters: Boolean!, $customIncludeOriginDetails: Boolean!) {
+  user: createUser(userId: $userId) {
+    ...AdminUserInfo
+  } 
+}

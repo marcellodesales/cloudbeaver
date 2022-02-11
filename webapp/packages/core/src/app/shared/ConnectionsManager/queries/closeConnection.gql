@@ -1,3 +1,0 @@
-mutation closeConnection($id: ID!) {
-  closeConnection(id: $id)
-}

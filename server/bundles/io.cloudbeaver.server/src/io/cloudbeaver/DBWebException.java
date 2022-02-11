@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2020 DBeaver Corp and others
+ * Copyright (C) 2010-2022 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import graphql.ErrorType;
 import graphql.GraphQLError;
 import graphql.language.SourceLocation;
 import io.cloudbeaver.server.graphql.GraphQLEndpoint;
+import io.cloudbeaver.service.WebServiceBindingBase;
 import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.model.DBPDataSource;
 import org.jkiss.dbeaver.utils.GeneralUtils;
@@ -38,6 +39,11 @@ import java.util.Map;
 public class DBWebException extends DBException implements GraphQLError {
 
     public static final String ERROR_CODE_SESSION_EXPIRED = "sessionExpired";
+    public static final String ERROR_CODE_ACCESS_DENIED = "accessDenied";
+    public static final String ERROR_CODE_LICENSE_DENIED = "licenseRequired";
+    public static final String ERROR_CODE_IDENT_REQUIRED = "identRequired";
+    public static final String ERROR_CODE_AUTH_REQUIRED = "authRequired";
+    public static final String ERROR_CODE_QUOTA_EXCEEDED = "quotaExceeded";
 
     private List<Object> path;
     private List<SourceLocation> locations;
@@ -54,6 +60,11 @@ public class DBWebException extends DBException implements GraphQLError {
 
     public DBWebException(String message, Throwable cause) {
         super(makeMessage(message, cause), cause);
+    }
+
+    public DBWebException(String message, String errorCode, Throwable cause) {
+        this(message, cause);
+        this.webErrorCode = errorCode;
     }
 
     public DBWebException(Throwable cause, DBPDataSource dataSource) {
@@ -98,13 +109,18 @@ public class DBWebException extends DBException implements GraphQLError {
 
         Map<String, Object> extensions = new LinkedHashMap<>();
         String stString = buf.toString();
-        int divPos = stString.indexOf(GraphQLEndpoint.class.getName());
+        int divPos = stString.indexOf(WebServiceBindingBase.class.getName());
+        if (divPos == -1) {
+            divPos = stString.indexOf(GraphQLEndpoint.class.getName());
+        }
         if (divPos != -1) {
             stString = stString.substring(0, divPos);
-            divPos = stString.lastIndexOf(")");
-            if (divPos != -1) {
-                stString = stString.substring(0, divPos + 1);
-            }
+        }
+        divPos = stString.indexOf(':');
+        if (divPos != -1) {
+            String exceptionClass = stString.substring(0, divPos);
+            extensions.put("exceptionClass", exceptionClass);
+            //stString = stString.substring(divPos + 1).trim();
         }
         extensions.put("stackTrace", stString);
         int errorCode = getErrorCode();
@@ -123,6 +139,18 @@ public class DBWebException extends DBException implements GraphQLError {
     }
 
     private static String makeMessage(String message, Throwable cause) {
+        if (CommonUtils.isEmpty(message)) {
+            if (cause != null) {
+                if (cause.getMessage() != null) {
+                    return cause.getMessage();
+                }
+                return cause.getClass().getName();
+            }
+            return "Unknown internal error";
+        }
+        if (CommonUtils.equalObjects(message, cause.getMessage())) {
+            return message;
+        }
         return message + ":\n" + cause.getMessage();
     }
 

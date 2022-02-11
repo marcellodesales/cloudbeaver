@@ -1,48 +1,52 @@
-echo "Clone and build Cloudbeaver"
+@echo off
+echo Clone and build Cloudbeaver
 
+IF EXIST drivers rmdir /S /Q drivers
 IF EXIST cloudbeaver rmdir /S /Q cloudbeaver
+mkdir cloudbeaver
 mkdir cloudbeaver\server
 mkdir cloudbeaver\conf
 mkdir cloudbeaver\workspace
 mkdir cloudbeaver\web
 
-echo "Build dbeaver application"
+echo Pull dbeaver platform
 
 cd ../..
 IF NOT EXIST dbeaver git clone https://github.com/dbeaver/dbeaver.git
-cd dbeaver
-git pull
-call mvn clean install
-cd ../cloudbeaver/deploy
+cd cloudbeaver\deploy
 
-echo "Build cloudbeaver server"
+echo Build cloudbeaver server
 
-cd ..\server
-call mvn clean package
-cd ..\deploy
+cd ..\server\product\aggregate
+call mvn clean package -Dheadless-platform
 
-echo "Copy server packages"
+cd ..\..\..\deploy
+
+echo Copy server packages
 
 xcopy /E /Q ..\server\product\web-server\target\products\io.cloudbeaver.product\all\all\all\* cloudbeaver\server >NUL
-copy scripts\run-server.bat cloudbeaver >NUL
-mkdir cloudbeaver\workspace\GlobalConfiguration
-xcopy /E /Q ..\samples\sample-databases\GlobalConfiguration cloudbeaver\workspace\GlobalConfiguration >NUL
-copy ..\samples\sample-databases\cloudbeaver-sample.conf cloudbeaver\conf\cloudbeaver.conf >NUL
+copy scripts\* cloudbeaver >NUL
+mkdir cloudbeaver\samples
+mkdir cloudbeaver\samples\db
+xcopy /E /Q ..\samples\sample-databases\db cloudbeaver\samples\db >NUL
+copy ..\samples\sample-databases\GlobalConfiguration\.dbeaver\data-sources.json cloudbeaver\conf\initial-data-sources.conf >NUL
+copy ..\samples\sample-databases\*.conf cloudbeaver\conf >NUL
+move drivers cloudbeaver >NUL
 
-echo "Build static content"
+echo Build static content
 
 cd ..\webapp
 
-call npm i lerna -g
+call yarn
 call lerna bootstrap
-call lerna run build --scope @dbeaver/dbeaver -- -- --pluginsList=../../../../products/default/plugins-list.js
+call lerna run build --no-bail --stream --scope=@cloudbeaver/product-default &::-- -- --env source-map
 
 cd ..\deploy
 
-echo "Copy static content"
+echo Copy static content
 
-xcopy /E /Q ..\webapp\packages\dbeaver\dist cloudbeaver\web >NUL
+xcopy /E /Q ..\webapp\packages\product-default\lib cloudbeaver\web >NUL
 
-echo "Cloudbeaver is ready. Run run-server.bat in cloudbeaver folder to start the server."
+echo Cloudbeaver is ready. Run run-server.bat in cloudbeaver folder to start the server.
 
 pause

@@ -1,0 +1,5 @@
+query driverList($driverId: ID, $includeProviderProperties: Boolean!, $includeDriverProperties: Boolean!, $includeDriverParameters: Boolean!) {
+  drivers: driverList(id: $driverId) {
+    ...DatabaseDriver
+  }
+}

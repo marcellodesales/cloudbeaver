@@ -1,8 +1,11 @@
-@rem echo off
-
+@echo off
 for /f %%a in ('dir /B /S server\plugins\org.eclipse.equinox.launcher*.jar') do SET launcherJar="%%a"
-SET workspacePath=workspace
 
 echo "Starting Cloudbeaver Server"
 
-java -jar %launcherJar% -product io.cloudbeaver.server.product -data %workspacePath% -web-config conf/cloudbeaver.conf -nl en -registryMultiLanguage -vmargs -Xmx2048M
+IF NOT EXIST workspace\.metadata (
+    mkdir workspace\GlobalConfiguration\.dbeaver\
+    copy conf\initial-data-sources.conf workspace\GlobalConfiguration\.dbeaver\data-sources.json
+)
+
+java %JAVA_OPTS% -jar %launcherJar% -product io.cloudbeaver.product.ce.product -web-config conf/cloudbeaver.conf -nl en -registryMultiLanguage

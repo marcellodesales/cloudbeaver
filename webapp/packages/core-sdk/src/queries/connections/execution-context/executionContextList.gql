@@ -1,0 +1,11 @@
+query executionContextList(
+  $connectionId: ID
+  $contextId: ID
+) {
+  contexts: sqlListContexts(
+    connectionId: $connectionId
+    contextId: $contextId
+  ) {
+    ...ExecutionContextInfo
+  }
+}

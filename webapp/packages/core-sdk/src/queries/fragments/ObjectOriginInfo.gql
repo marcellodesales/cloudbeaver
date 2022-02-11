@@ -1,0 +1,20 @@
+fragment ObjectOriginInfo on ObjectOrigin {
+  type
+  subType
+  displayName
+  icon
+
+  details @include(if: $customIncludeOriginDetails) {
+    id
+    displayName
+    description
+    category
+    dataType
+    defaultValue
+    validValues
+    value
+    length
+    features
+    order
+  }
+}

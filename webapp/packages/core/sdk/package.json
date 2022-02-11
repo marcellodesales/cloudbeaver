@@ -1,8 +1,0 @@
-{
-  "name": "@dbeaver/core/sdk",
-  "private": true,
-  "sideEffects": false,
-  "main": "../dist/sdk",
-  "module": "../dist/sdk",
-  "types": "../dist/types/sdk"
-}

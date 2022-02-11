@@ -1,0 +1,43 @@
+mutation getSqlExecuteTaskResults(
+    $taskId: ID!
+) {
+    result: asyncSqlExecuteResults(
+        taskId: $taskId
+    ) {
+        duration
+        statusMessage
+        filterText
+        results {
+            title
+            updateRowCount
+            sourceQuery
+            dataFormat
+            resultSet {
+                id
+                columns {
+                    dataKind
+                    entityName
+                    fullTypeName
+                    icon
+                    label
+                    maxLength
+                    name
+                    position
+                    precision
+                    required
+                    readOnly
+                    readOnlyStatus
+                    scale
+                    typeName
+                    supportedOperations {
+                        id
+                        expression
+                        argumentCount
+                    }
+                }
+                rows
+                hasMoreData
+            }
+        }
+    }
+}
