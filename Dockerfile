@@ -1,5 +1,5 @@
 ########
-######## DBeaver Core component
+######## DBeaver Core component test
 ########
 ######## 
 FROM alpine/git AS core-builder
